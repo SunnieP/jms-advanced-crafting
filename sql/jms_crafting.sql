@@ -38,10 +38,14 @@ CREATE TABLE IF NOT EXISTS `crafting_recipes` (
   `required_global_level` int NOT NULL DEFAULT 1,
   `required_category_level` int NOT NULL DEFAULT 1,
   `blueprint_id` varchar(64) DEFAULT NULL,
+  `gender_restriction` varchar(1) DEFAULT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   UNIQUE KEY `slug` (`slug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE `crafting_recipes`
+  ADD COLUMN IF NOT EXISTS `gender_restriction` varchar(1) DEFAULT NULL AFTER `blueprint_id`;
 
 CREATE TABLE IF NOT EXISTS `crafting_recipe_ingredients` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -83,9 +87,9 @@ CREATE TABLE IF NOT EXISTS `crafting_benches` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `crafting_recipes`
-  (`slug`, `label`, `description`, `category_id`, `craft_time_ms`, `global_xp`, `category_xp`, `required_global_level`, `required_category_level`, `blueprint_id`, `enabled`)
+  (`slug`, `label`, `description`, `category_id`, `craft_time_ms`, `global_xp`, `category_xp`, `required_global_level`, `required_category_level`, `blueprint_id`, `gender_restriction`, `enabled`)
 VALUES
-  ('meta_glasses', 'Meta Glasses', 'Refurbished smart glasses assembled from salvaged components.', 'electronics', 30000, 20, 32, 3, 2, NULL, 1)
+  ('meta_glasses', 'Meta Glasses', 'Refurbished smart glasses assembled from salvaged components.', 'electronics', 30000, 20, 32, 3, 2, NULL, NULL, 1)
 ON DUPLICATE KEY UPDATE `label` = VALUES(`label`);
 
 SET @meta_glasses_recipe_id = (SELECT `id` FROM `crafting_recipes` WHERE `slug` = 'meta_glasses' LIMIT 1);
@@ -103,3 +107,21 @@ INSERT INTO `crafting_recipe_tools` (`recipe_id`, `item_name`, `amount`) VALUES
 DELETE FROM `crafting_recipe_results` WHERE `recipe_id` = @meta_glasses_recipe_id;
 INSERT INTO `crafting_recipe_results` (`recipe_id`, `item_name`, `amount`) VALUES
   (@meta_glasses_recipe_id, 'meta_glasses', 1);
+
+INSERT INTO `crafting_recipes`
+  (`slug`, `label`, `description`, `category_id`, `craft_time_ms`, `global_xp`, `category_xp`, `required_global_level`, `required_category_level`, `blueprint_id`, `gender_restriction`, `enabled`)
+VALUES
+  ('female_rose', 'Female Rose', 'A discreet personal device assembled from salvaged electronics.', 'novelty', 25000, 15, 28, 2, 1, NULL, 'f', 1)
+ON DUPLICATE KEY UPDATE `label` = VALUES(`label`);
+
+SET @female_rose_recipe_id = (SELECT `id` FROM `crafting_recipes` WHERE `slug` = 'female_rose' LIMIT 1);
+
+DELETE FROM `crafting_recipe_ingredients` WHERE `recipe_id` = @female_rose_recipe_id;
+INSERT INTO `crafting_recipe_ingredients` (`recipe_id`, `item_name`, `amount`) VALUES
+  (@female_rose_recipe_id, 'rubber', 10),
+  (@female_rose_recipe_id, 'battery', 2),
+  (@female_rose_recipe_id, 'cheap_phone_charger', 1);
+
+DELETE FROM `crafting_recipe_results` WHERE `recipe_id` = @female_rose_recipe_id;
+INSERT INTO `crafting_recipe_results` (`recipe_id`, `item_name`, `amount`) VALUES
+  (@female_rose_recipe_id, 'female_rose', 1);
