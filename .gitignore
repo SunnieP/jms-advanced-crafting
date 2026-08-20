@@ -1,0 +1,60 @@
+﻿# Dependencies
+node_modules/
+web/node_modules/
+
+# Frontend build output
+web/dist/
+web/.vite/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Logs
+*.log
+logs/
+log/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime and temporary files
+*.tmp
+*.temp
+*.cache
+.cache/
+tmp/
+temp/
+
+# Editor settings
+.vscode/
+.idea/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# FiveM crash dumps and local runtime artifacts
+crashes/
+crashdumps/
+*.dmp
+*.mdmp
+citizen/
+
+# Local test/development overrides
+shared/config.local.lua
+shared/config.dev.lua
+server/config.local.lua
+client/config.local.lua
