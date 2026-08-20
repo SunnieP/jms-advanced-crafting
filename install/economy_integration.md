@@ -1,6 +1,8 @@
-# Meta Glasses Economy Loop
+# Crafting Economy Loops
 
-This document covers everything needed to connect the Meta Glasses recipe to your existing job, loot, and reseller systems.
+This document covers everything needed to connect the Meta Glasses and Female Rose recipes to your existing job, loot, and reseller systems.
+
+## Meta Glasses
 
 ```text
 Detector job (ak47_prospecting) -> Broken Glasses
@@ -8,31 +10,14 @@ Dumpster loot (ox_inventory)    -> Battery
 Gas station shop (existing)     -> Cheap Phone Charger
 YouTool shop (existing)         -> Screwdriver
 Electronics Bench (jms_crafting)-> Meta Glasses
-Pawn shop (ak47_drugmanager)    -> Cash payout
+Pawn shop (ak47_drugmanager)    -> Cash payout ($300-$750)
 ```
 
-## 1. ak47_prospecting loot table
+### 1. ak47_prospecting loot table
 
-No item rename needed on your side. `jms_crafting` now uses the exact same key your prospecting script already drops: `brokenglasses` (no underscore).
+No item rename needed. `jms_crafting` uses the exact key your prospecting script already drops: `brokenglasses` (no underscore).
 
-Current pool for reference:
-
-```lua
-('actioncam', 'Action Camera', 1),
-('brokenglasses', 'Broken Glasses', 1),
-('brokenpendrive', 'Broken Pendrive', 1),
-('brokenphone', 'Broken Phone', 1),
-('dianecklace', 'Dia Necklace', 1),
-('gem', 'Gem', 1),
-('goldchain', 'Gold Chain', 1),
-('goldrolex', 'Gold Rolex', 1),
-('detector', 'Detector', 1),
-('rustygun', 'Rusty Gun', 1),
-('rustedrod', 'Rusted Rod', 1),
-('weddingring', 'Wedding Ring', 1)
-```
-
-Optional: to make Broken Glasses slightly more common than a one-in-twelve chance (since it feeds a crafting recipe), duplicate the row two or three times in the pool, for example:
+Optional: duplicate the row two or three times in the pool to raise its drop weight, since it now feeds a crafting recipe:
 
 ```lua
 ('brokenglasses', 'Broken Glasses', 1),
@@ -40,9 +25,9 @@ Optional: to make Broken Glasses slightly more common than a one-in-twelve chanc
 ('brokenglasses', 'Broken Glasses', 1),
 ```
 
-## 2. ox_inventory dumpster loot
+### 2. ox_inventory dumpster loot
 
-Add `battery` to the dumpster convar so it can be found while scavenging:
+Add `battery` to the dumpster convar:
 
 ```lua
 set inventory:dumpsterloot [
@@ -54,15 +39,11 @@ set inventory:dumpsterloot [
 ]
 ```
 
-The third value is the relative weight. `2` makes batteries roughly twice as common as burgers -- common enough to farm, not guaranteed every dumpster.
+### 3. Gas station and YouTool shops
 
-## 3. Gas station and YouTool shops
+No changes required. `cheap_phone_charger` and `screwdriver` already exist in their respective shops.
 
-No changes required. Both `cheap_phone_charger` and `screwdriver` already exist in their respective shops. The crafting resource only checks live inventory counts, regardless of where the item came from.
-
-## 4. ak47_drugmanager pawn shop sell entry
-
-Add this entry to your `ak47_drugmanager` sell items config, matching your existing schema:
+### 4. ak47_drugmanager sell entry
 
 ```lua
 ["meta_glasses"] = {
@@ -75,20 +56,72 @@ Add this entry to your `ak47_drugmanager` sell items config, matching your exist
 },
 ```
 
-`minamount`/`maxamount` are set to 1 because Meta Glasses are a finished, valuable item rather than a bulk commodity like a meth pouch. Adjust upward later if you want players to be able to sell more than one per transaction.
+## Female Rose
 
-## 5. Crafted-item provenance (optional, currently disabled)
+```text
+Trash job / Mining         -> Rubber (x10 per craft)
+Dumpster loot (ox_inventory)-> Battery (x2 per craft)
+Gas station shop (existing)-> Cheap Phone Charger (x1 per craft)
+Electronics Bench (jms_crafting) -> Female Rose
+Pawn shop (ak47_drugmanager)     -> Cash payout ($300-$750)
+```
 
-The current build does **not** enforce `metadata.crafted == true` before allowing a sale. This keeps the loop simple for a personal server. If you later want to prevent players from selling store-bought or duplicated Meta Glasses through the pawn shop, we can add a metadata check on the `ak47_drugmanager` sell hook (or a wrapper event) that rejects items missing that flag.
+Female Rose shares its `battery` and `cheap_phone_charger` sourcing with Meta Glasses, so no additional setup is needed for those two. The only new sourcing requirement is `rubber`.
+
+### 1. Rubber sourcing (trash job / mining)
+
+Add `rubber` as a possible reward/drop in whichever trash job and mining script you're running. This resource does not control those loot tables directly -- add the item to each script's own reward or loot pool configuration using the item key `rubber`.
+
+### 2. ak47_drugmanager sell entry
+
+```lua
+["female_rose"] = {
+    name = "female_rose",
+    label = "Female Rose",
+    minamount = 1,
+    maxamount = 1,
+    minprice = 300,
+    maxprice = 750,
+},
+```
+
+### 3. Gender restriction
+
+Female Rose is restricted to characters with `sex = 'f'` on the `users` table. This is enforced server-side in `server/crafting.lua` via `JMSBridge.GetSex(source)`, which queries:
+
+```sql
+SELECT sex FROM users WHERE identifier = ?
+```
+
+Behavior:
+
+- The recipe is visible in the crafting UI regardless of gender, but is marked as unavailable (`genderAllowed = false`) for characters whose `sex` column is not `'f'`.
+- The server rejects `startCraft` for a mismatched gender with reason `gender_restricted`, even if a player attempts to bypass the UI lock.
+- If the `sex` column is null or missing for a player, the recipe is treated as unavailable (fails closed, not open).
+
+No other recipes are gender-restricted by default. To add a gender restriction to a future recipe, set the `gender_restriction` column on `crafting_recipes` to `'m'` or `'f'`, or leave it `NULL` for no restriction.
 
 ## Full loop test checklist
 
-1. Use the detector job until you receive `brokenglasses` (may take multiple attempts depending on pool weighting).
+### Meta Glasses
+
+1. Use the detector job until you receive `brokenglasses`.
 2. Search dumpsters until you receive `battery` x2.
 3. Buy `cheap_phone_charger` at the gas station.
 4. Buy or already own `screwdriver` from YouTool.
 5. Go to the Electronics Bench and run `/craft`.
-6. Confirm the Meta Glasses recipe shows all four requirements met, then craft.
-7. Confirm `meta_glasses` appears in your inventory and the screwdriver was **not** consumed.
-8. Take the Meta Glasses to your player-owned pawn shop and sell through `ak47_drugmanager`.
-9. Confirm the cash payout lands between $300 and $750.
+6. Confirm the Meta Glasses recipe shows all requirements met, then craft.
+7. Confirm `meta_glasses` appears in inventory and the screwdriver was **not** consumed.
+8. Sell through `ak47_drugmanager` and confirm payout lands between $300-$750.
+
+### Female Rose
+
+1. Confirm the crafting character has `sex = 'f'` on the `users` table.
+2. Farm `rubber` x10 via trash job or mining.
+3. Farm `battery` x2 via dumpster.
+4. Buy `cheap_phone_charger` at the gas station.
+5. Go to the Electronics Bench and run `/craft`.
+6. Confirm the Female Rose recipe shows as available for a female character.
+7. Log in as (or switch to) a male character and confirm the recipe shows as unavailable/blocked.
+8. Craft as the female character, confirm `female_rose` appears in inventory.
+9. Sell through `ak47_drugmanager` and confirm payout lands between $300-$750.
